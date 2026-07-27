@@ -15,7 +15,5 @@ public class MercScannerSettings : ISettings
     public ColorNode MatchColor { get; set; } = new ColorNode(Color.Lime.ToSharpDx());
     public ColorNode ForbiddenSkillColor { get; set; } = new ColorNode(Color.OrangeRed.ToSharpDx());
     public ColorNode RequiredSkillColor { get; set; } = new ColorNode(Color.DeepSkyBlue.ToSharpDx());
-    public ColorNode DefaultSkillColor { get; set; } = new ColorNode(Color.White.ToSharpDx());
     public ColorNode ValuableItemColor { get; set; } = new ColorNode(Color.Gold.ToSharpDx());
-    public ColorNode BackgroundColor { get; set; } = new ColorNode(Color.Black.ToSharpDx());
 }

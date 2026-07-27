@@ -75,21 +75,31 @@ public class MercScanner : BaseSettingsPlugin<MercScannerSettings>
     {
         foreach (var skill in uiSkills)
         {
-            DrawElementFrame(skill.Row, ColorForName(skill.Name, matchingSets));
+            if (TryColorForRole(ClassifyActive(skill.Name), matchingSets, out var skillColor))
+                DrawElementFrame(skill.NameElement, skillColor);
 
             foreach (var support in skill.Supports)
-                DrawElementFrame(support.Slot, ColorForName(support.Name, matchingSets));
+            {
+                if (TryColorForRole(ClassifySupport(skill.Name, support.Name), matchingSets, out var supportColor))
+                    DrawElementFrame(support.Slot, supportColor);
+            }
         }
     }
 
-    private Color ColorForName(string name, List<MercSkillSet> matchingSets)
+    private bool TryColorForRole(SkillRole role, List<MercSkillSet> matchingSets, out Color color)
     {
-        return ClassifyName(name) switch
+        switch (role)
         {
-            SkillRole.Required => matchingSets.Count > 0 ? Settings.MatchColor : Settings.RequiredSkillColor,
-            SkillRole.Forbidden => Settings.ForbiddenSkillColor,
-            _ => Settings.DefaultSkillColor,
-        };
+            case SkillRole.Required:
+                color = matchingSets.Count > 0 ? Settings.MatchColor : Settings.RequiredSkillColor;
+                return true;
+            case SkillRole.Forbidden:
+                color = Settings.ForbiddenSkillColor;
+                return true;
+            default:
+                color = default;
+                return false;
+        }
     }
 
     private void RenderValuableRucksackAlerts(MercenaryEncounterWindow window)
@@ -223,10 +233,11 @@ public class MercScanner : BaseSettingsPlugin<MercScannerSettings>
             if (skillLine is not { IsValid: true, Address: not 0 })
                 continue;
 
+            Element nameEl;
             string skillName;
             try
             {
-                var nameEl = skillLine.GetChildAtIndex(1) ?? skillLine[1];
+                nameEl = skillLine.GetChildAtIndex(1) ?? skillLine[1];
                 skillName = CleanUiText(nameEl?.Text);
             }
             catch
@@ -234,10 +245,10 @@ public class MercScanner : BaseSettingsPlugin<MercScannerSettings>
                 continue;
             }
 
-            if (string.IsNullOrWhiteSpace(skillName))
+            if (string.IsNullOrWhiteSpace(skillName) || nameEl is not { IsValid: true, Address: not 0 })
                 continue;
 
-            result.Add(new UiSkill(skillName, skillLine, ReadSupports(skillLine)));
+            result.Add(new UiSkill(skillName, nameEl, ReadSupports(skillLine)));
         }
 
         return result;
@@ -322,13 +333,26 @@ public class MercScanner : BaseSettingsPlugin<MercScannerSettings>
         return string.IsNullOrWhiteSpace(text) ? null : text;
     }
 
-    private static SkillRole ClassifyName(string name)
+    private static SkillRole ClassifyActive(string skillName)
     {
         foreach (var set in MercProfiles.SkillSets)
         {
-            if (set.ForbiddenSkills.Any(f => MercProfiles.SkillNameMatches(name, f)))
+            if (set.ForbiddenSkills.Any(f => MercProfiles.SkillNameMatches(skillName, f)))
                 return SkillRole.Forbidden;
-            if (MercProfiles.IsRequiredSkillName(name, set))
+            if (MercProfiles.IsRequiredSkillName(skillName, set))
+                return SkillRole.Required;
+        }
+
+        return SkillRole.Normal;
+    }
+
+    private static SkillRole ClassifySupport(string activeSkillName, string supportName)
+    {
+        foreach (var set in MercProfiles.SkillSets)
+        {
+            if (MercProfiles.IsForbiddenSupportOnActive(activeSkillName, supportName, set))
+                return SkillRole.Forbidden;
+            if (MercProfiles.IsRequiredSupportOnActive(activeSkillName, supportName, set))
                 return SkillRole.Required;
         }
 
@@ -342,10 +366,10 @@ public class MercScanner : BaseSettingsPlugin<MercScannerSettings>
         Forbidden,
     }
 
-    private sealed class UiSkill(string name, Element row, List<UiSupport> supports)
+    private sealed class UiSkill(string name, Element nameElement, List<UiSupport> supports)
     {
         public string Name { get; } = name;
-        public Element Row { get; } = row;
+        public Element NameElement { get; } = nameElement;
         public List<UiSupport> Supports { get; } = supports ?? [];
     }
 
