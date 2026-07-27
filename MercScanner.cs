@@ -1,28 +1,43 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using ExileCore;
+using ExileCore.PoEMemory;
 using ExileCore.PoEMemory.Components;
 using ExileCore.PoEMemory.MemoryObjects;
-using ExileCore.Shared.Enums;
 using ExileCore.Shared.Helpers;
-using ImGuiNET;
 using SharpDX;
-using Vector2 = System.Numerics.Vector2;
+using Entity = ExileCore.PoEMemory.MemoryObjects.Entity;
 
 namespace MercScanner;
 
 public class MercScanner : BaseSettingsPlugin<MercScannerSettings>
 {
-    private static readonly string[] SkillNoise =
-    [
-        "Move",
-        "EASMercenaryPortalOut",
-    ];
+    private static readonly int[] SkillListIndices = [2, 10, 0, 1, 0];
+
+    private bool _loggedMissingNinjaPrice;
 
     public override bool Initialise()
     {
+        ReloadProfiles();
         return true;
+    }
+
+    private void ReloadProfiles()
+    {
+        if (MercProfiles.Load(DirectoryFullName))
+        {
+            LogMessage($"MercScanner: loaded {MercProfiles.SkillSets.Count} skill set(s) from {MercProfiles.LastLoadedPath}", 3);
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(ConfigDirectory) && MercProfiles.Load(ConfigDirectory))
+        {
+            LogMessage($"MercScanner: loaded {MercProfiles.SkillSets.Count} skill set(s) from {MercProfiles.LastLoadedPath}", 3);
+            return;
+        }
+
+        LogError($"MercScanner: failed to load skill-sets.json — {MercProfiles.LastLoadError}");
     }
 
     public override Job Tick()
@@ -32,108 +47,55 @@ public class MercScanner : BaseSettingsPlugin<MercScannerSettings>
 
     public override void Render()
     {
-        if (!Settings.IgnoreLargePanels && GameController.IngameState.IngameUi.LargePanels.Any(x => x.IsVisible) ||
-            !Settings.IgnoreFullscreenPanels && GameController.IngameState.IngameUi.FullscreenPanels.Any(x => x.IsVisible))
-        {
-            return;
-        }
+        var ingameUi = GameController.IngameState.IngameUi;
 
-        RenderIdleMercs();
-        RenderValuableRucksackAlerts();
+        if (!Settings.IgnoreFullscreenPanels && ingameUi.FullscreenPanels.Any(x => x.IsVisible))
+            return;
+
+        var window = ingameUi.MercenaryEncounterWindow;
+        if (window is not { IsVisible: true, IsValid: true })
+            return;
+
+        var uiSkills = ReadEncounterSkills(window);
+        var skills = uiSkills
+            .Select(s => new MercSkillSnapshot(s.Name, s.Supports.Select(x => x.Name).ToList()))
+            .ToList();
+        var matchingSets = MercProfiles.SkillSets
+            .Where(set => MercProfiles.IsFullMatch(skills, set))
+            .ToList();
+
+        if (matchingSets.Count > 0)
+            DrawElementFrame(window.RematchButton, Settings.MatchColor);
+
+        DrawSkillBorders(uiSkills, matchingSets);
+        RenderValuableRucksackAlerts(window);
     }
 
-    private void RenderIdleMercs()
+    private void DrawSkillBorders(List<UiSkill> uiSkills, List<MercSkillSet> matchingSets)
     {
-        foreach (var idleMerc in GameController.EntityListWrapper.ValidEntitiesByType[EntityType.Monster]
-                     .Where(x => x.Metadata.StartsWith("Metadata/Monsters/Mercenaries/", StringComparison.Ordinal) &&
-                                 !x.IsHostile &&
-                                 x.TryGetComponent<Positioned>(out var positioned) &&
-                                 positioned.Reaction == 70))
+        foreach (var skill in uiSkills)
         {
-            if (!idleMerc.TryGetComponent<Actor>(out var actor))
-                continue;
+            DrawElementFrame(skill.Row, ColorForName(skill.Name, matchingSets));
 
-            var skills = CollectSkills(actor);
-            if (skills.Count == 0)
-                continue;
-
-            var merScreenPos = GameController.IngameState.Camera.WorldToScreen(idleMerc.PosNum);
-            var lineHeight = ImGui.GetTextLineHeight();
-            var line = 0;
-
-            var matchingSets = MercProfiles.SkillSets
-                .Where(set => MercProfiles.MatchesType(idleMerc.Metadata, idleMerc.Path, idleMerc.RenderName, set)
-                              && MercProfiles.IsFullMatch(skills, set))
-                .ToList();
-
-            if (Settings.ShowSetMatchBanner && matchingSets.Count > 0)
-            {
-                foreach (var set in matchingSets)
-                {
-                    var loadout = MercProfiles.GetMatchedLoadoutName(skills, set);
-                    var banner = loadout != null
-                        ? $"MATCH: {set.Name} ({loadout})"
-                        : $"MATCH: {set.Name}";
-                    Graphics.DrawTextWithBackground(
-                        banner,
-                        merScreenPos + new Vector2(0, lineHeight * line),
-                        Settings.MatchColor,
-                        Settings.BackgroundColor);
-                    line++;
-                }
-            }
-
-            foreach (var skill in skills)
-            {
-                var role = ClassifySkill(skill.Name);
-                if (!Settings.ShowAllSkills && role == SkillRole.Normal)
-                    continue;
-
-                var color = role switch
-                {
-                    SkillRole.Required => matchingSets.Count > 0
-                        ? Settings.MatchColor
-                        : Settings.RequiredSkillColor,
-                    SkillRole.Forbidden => Settings.ForbiddenSkillColor,
-                    _ => Settings.DefaultSkillColor,
-                };
-
-                // Show +GMP3 / -GMP3 on actives that have per-skill link requirements.
-                var label = skill.Name;
-                var annotation = MercProfiles.SkillSets
-                    .Select(set => MercProfiles.GetLinkAnnotation(skill.Name, skills, set))
-                    .FirstOrDefault(a => a != null);
-                if (annotation != null)
-                {
-                    label = $"{skill.Name} [{annotation}]";
-                    if (annotation.Contains('-', StringComparison.Ordinal))
-                        color = Settings.ForbiddenSkillColor;
-                    else if (matchingSets.Count > 0)
-                        color = Settings.MatchColor;
-                    else
-                        color = Settings.RequiredSkillColor;
-                }
-
-                Graphics.DrawTextWithBackground(
-                    label,
-                    merScreenPos + new Vector2(0, lineHeight * line),
-                    color,
-                    Settings.BackgroundColor);
-                line++;
-            }
+            foreach (var support in skill.Supports)
+                DrawElementFrame(support.Slot, ColorForName(support.Name, matchingSets));
         }
     }
 
-    private void RenderValuableRucksackAlerts()
+    private Color ColorForName(string name, List<MercSkillSet> matchingSets)
     {
-        if (!Settings.AlertValuableItems)
-            return;
+        return ClassifyName(name) switch
+        {
+            SkillRole.Required => matchingSets.Count > 0 ? Settings.MatchColor : Settings.RequiredSkillColor,
+            SkillRole.Forbidden => Settings.ForbiddenSkillColor,
+            _ => Settings.DefaultSkillColor,
+        };
+    }
 
-        var window = GameController.IngameState.IngameUi.MercenaryEncounterWindow;
-        if (window is not { IsVisible: true })
-            return;
-
-        var valuables = new List<(string Name, RectangleF Rect)>();
+    private void RenderValuableRucksackAlerts(MercenaryEncounterWindow window)
+    {
+        var minChaos = Settings.AlertMinChaosValue.Value;
+        var valuables = new List<(string Name, double Chaos, RectangleF Rect)>();
 
         foreach (var inventory in window.Inventories ?? Enumerable.Empty<VendorInventory>())
         {
@@ -151,73 +113,222 @@ public class MercScanner : BaseSettingsPlugin<MercScannerSettings>
                 var renderName = entity.RenderName;
                 var metadata = entity.Metadata;
 
-                if (!MercProfiles.IsValuableItem(baseName, renderName, metadata))
-                    continue;
-
                 var display = !string.IsNullOrWhiteSpace(baseName)
                     ? baseName
                     : !string.IsNullOrWhiteSpace(renderName)
                         ? renderName
-                        : metadata;
+                        : metadata ?? "?";
 
-                valuables.Add((display, invItem.GetClientRectCache));
+                var chaos = TryGetNinjaChaosValue(entity);
+                if (chaos + 1e-6 < minChaos)
+                    continue;
+
+                valuables.Add((display, chaos, invItem.GetClientRectCache));
             }
         }
 
         if (valuables.Count == 0)
             return;
 
-        foreach (var (_, rect) in valuables)
+        foreach (var (_, _, rect) in valuables)
         {
             Graphics.DrawFrame(rect, Settings.ValuableItemColor, 3);
         }
 
-        var banner = "VALUABLE: " + string.Join(", ", valuables.Select(v => v.Name).Distinct(StringComparer.OrdinalIgnoreCase));
-        var textSize = Graphics.MeasureText(banner);
-        var screen = GameController.Window.GetWindowRectangleTimeCache;
-        var pos = new Vector2(
-            screen.Center.X - textSize.X / 2f,
-            screen.Center.Y - screen.Height * 0.25f);
-
-        Graphics.DrawTextWithBackground(banner, pos, Settings.ValuableItemColor, Settings.BackgroundColor);
+        DrawElementFrame(window.TakeItemButton, Settings.ValuableItemColor);
     }
 
-    private static List<MercSkillSnapshot> CollectSkills(Actor actor)
+    private void DrawElementFrame(Element element, Color color)
     {
-        var skills = new List<MercSkillSnapshot>();
-        foreach (var skill in actor.ActorSkills.Where(x => !string.IsNullOrWhiteSpace(x.Name)))
+        try
         {
-            var fullSkillName = skill.Name;
-            if (SkillNoise.Any(n => fullSkillName.Equals(n, StringComparison.Ordinal)))
+            if (element is not { IsValid: true, Address: not 0, IsVisible: true })
+                return;
+
+            var rect = element.GetClientRectCache;
+            if (rect.Width <= 1 || rect.Height <= 1)
+                return;
+
+            Graphics.DrawFrame(rect, color, 3);
+        }
+        catch
+        {
+        }
+    }
+
+    private double TryGetNinjaChaosValue(Entity item)
+    {
+        try
+        {
+            if (item == null)
+                return 0;
+
+            var getValue = GameController.PluginBridge.GetMethod<Func<Entity, double>>("NinjaPrice.GetValue");
+            if (getValue == null)
+            {
+                if (!_loggedMissingNinjaPrice)
+                {
+                    _loggedMissingNinjaPrice = true;
+                    LogError("NinjaPrice.GetValue method not found — enable Ninja Price for chaos-value merc alerts");
+                }
+
+                return 0;
+            }
+
+            var value = getValue(item);
+            if (double.IsNaN(value) || double.IsInfinity(value) || value < 0)
+                return 0;
+
+            return value;
+        }
+        catch (Exception ex)
+        {
+            LogError($"Error getting item value from NinjaPrice: {ex.Message}");
+            return 0;
+        }
+    }
+
+    private static List<UiSkill> ReadEncounterSkills(MercenaryEncounterWindow window)
+    {
+        var result = new List<UiSkill>();
+
+        Element skillsRoot;
+        try
+        {
+            skillsRoot = window.GetChildFromIndices(SkillListIndices);
+        }
+        catch
+        {
+            return result;
+        }
+
+        if (skillsRoot is not { IsValid: true, Address: not 0 })
+            return result;
+
+        IList<Element> skillLines;
+        try
+        {
+            skillLines = skillsRoot.Children;
+        }
+        catch
+        {
+            return result;
+        }
+
+        if (skillLines == null)
+            return result;
+
+        foreach (var skillLine in skillLines)
+        {
+            if (skillLine is not { IsValid: true, Address: not 0 })
                 continue;
 
-            var skillName = fullSkillName;
-            if (skillName.EndsWith("Mercenary", StringComparison.Ordinal))
-                skillName = skillName[..^"Mercenary".Length];
-
-            IReadOnlyDictionary<GameStat, int> stats;
+            string skillName;
             try
             {
-                stats = skill.Stats ?? new Dictionary<GameStat, int>();
+                var nameEl = skillLine.GetChildAtIndex(1) ?? skillLine[1];
+                skillName = CleanUiText(nameEl?.Text);
             }
             catch
             {
-                stats = new Dictionary<GameStat, int>();
+                continue;
             }
 
-            skills.Add(new MercSkillSnapshot(skillName, stats));
+            if (string.IsNullOrWhiteSpace(skillName))
+                continue;
+
+            result.Add(new UiSkill(skillName, skillLine, ReadSupports(skillLine)));
         }
 
-        return skills;
+        return result;
     }
 
-    private static SkillRole ClassifySkill(string skillName)
+    private static List<UiSupport> ReadSupports(Element skillLine)
+    {
+        var supports = new List<UiSupport>();
+
+        Element supportList;
+        try
+        {
+            supportList = skillLine.GetChildFromIndices(3, 0);
+        }
+        catch
+        {
+            return supports;
+        }
+
+        if (supportList is not { IsValid: true, Address: not 0 })
+            return supports;
+
+        IList<Element> supportSlots;
+        try
+        {
+            supportSlots = supportList.Children;
+        }
+        catch
+        {
+            return supports;
+        }
+
+        if (supportSlots == null)
+            return supports;
+
+        foreach (var slot in supportSlots)
+        {
+            if (slot is not { IsValid: true, Address: not 0 })
+                continue;
+
+            var name = ReadSupportName(slot);
+            if (string.IsNullOrWhiteSpace(name))
+                continue;
+
+            supports.Add(new UiSupport(name, slot));
+        }
+
+        return supports;
+    }
+
+    private static string ReadSupportName(Element supportSlot)
+    {
+        try
+        {
+            var tooltip = supportSlot.Tooltip;
+            if (tooltip is not { IsValid: true, Address: not 0 })
+                return null;
+
+            var nameEl = tooltip.GetChildFromIndices(0, 0) ?? tooltip[0]?[0];
+            var text = CleanUiText(nameEl?.Text);
+            if (!string.IsNullOrWhiteSpace(text))
+                return text;
+
+            return CleanUiText(tooltip.Text);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string CleanUiText(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return null;
+
+        text = text.Trim();
+        var newline = text.IndexOfAny(['\r', '\n']);
+        if (newline >= 0)
+            text = text[..newline].Trim();
+
+        return string.IsNullOrWhiteSpace(text) ? null : text;
+    }
+
+    private static SkillRole ClassifyName(string name)
     {
         foreach (var set in MercProfiles.SkillSets)
         {
-            if (set.ForbiddenSkills.Any(f => MercProfiles.SkillNameMatches(skillName, f)))
+            if (set.ForbiddenSkills.Any(f => MercProfiles.SkillNameMatches(name, f)))
                 return SkillRole.Forbidden;
-            if (MercProfiles.IsRequiredSkillName(skillName, set))
+            if (MercProfiles.IsRequiredSkillName(name, set))
                 return SkillRole.Required;
         }
 
@@ -229,5 +340,18 @@ public class MercScanner : BaseSettingsPlugin<MercScannerSettings>
         Normal,
         Required,
         Forbidden,
+    }
+
+    private sealed class UiSkill(string name, Element row, List<UiSupport> supports)
+    {
+        public string Name { get; } = name;
+        public Element Row { get; } = row;
+        public List<UiSupport> Supports { get; } = supports ?? [];
+    }
+
+    private sealed class UiSupport(string name, Element slot)
+    {
+        public string Name { get; } = name;
+        public Element Slot { get; } = slot;
     }
 }
