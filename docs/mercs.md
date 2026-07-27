@@ -2,9 +2,18 @@
 
 What this plugin treats as a good merc, and how it decides.
 
+## Data source
+
+All skill and item checks run while the **mercenary encounter window** is open:
+
+- **Items:** `MercenaryEncounterWindow.Inventories`
+- **Skills + supports:** UI skill lines under the window (`2 → 10 → 0 → 1 → 0`), each child one skill row; supports under that row with names from cold tooltip text
+
+The overlay debug-draws every skill and support it parsed. **MATCH** banners use those real gem links (support must sit on the listed active).
+
 ## Match rules
 
-Each named set is a wishlist. On idle world mercs, the overlay shows skills and a **MATCH** banner when a set fully passes.
+Each named set is a wishlist. A **MATCH** banner shows when a set fully passes.
 
 | Rule | Meaning |
 | --- | --- |
@@ -20,7 +29,7 @@ Supports are checked per active skill when the game exposes useful stats (e.g. G
 
 Rucksack/gear valuables are a separate path: any merc type, only while the hire/encounter window is open.
 
-Source of truth for the lists: `MercProfiles.cs`.
+Source of truth for the lists: **`skill-sets.json`** (next to the plugin). Edit that file and reload the plugin.
 
 ---
 
@@ -126,10 +135,4 @@ Banner names the path: `MATCH: Combatant (Frost Blades)` or `MATCH: Combatant (S
 
 ## Valuable items (any merc)
 
-Alert when the encounter inventories show any of:
-
-- Divine Orb, Chaos Orb, Eternal Orb
-- Mirror of Kalandra, Hinekora's Lock
-- Headhunter, Mageblood, Progenesis, Original Sin
-- Rakiata's Dance, Defiance of Destiny, Astramentis
-- Horned Scarab of Glittering
+Alert when the encounter inventories show an item priced by **Ninja Price** at or above `AlertMinChaosValue` (default **10c**). Requires the Ninja Price plugin enabled. No name list — pricing only.
