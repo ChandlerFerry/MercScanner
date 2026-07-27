@@ -170,25 +170,6 @@
         "Smoke Mine",
         "Flame Dash"
       ]
-    },
-    {
-      "name": "Bloodletter",
-      "requiredLinks": [
-        {
-          "activeSkill": "Bladestorm",
-          "supports": [
-            "Melee Physical Damage",
-            "Greater Brutality",
-            "Increased Area of Effect"
-          ],
-          "forbiddenSupports": [
-            "Greater Ailment Damage"
-          ]
-        }
-      ],
-      "forbiddenSkills": [
-        "Leap Slam"
-      ]
     }
   ]
 }
