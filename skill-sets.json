@@ -1,0 +1,171 @@
+{
+  "skillSets": [
+    {
+      "name": "Manyshot",
+      "requiredLinks": [
+        {
+          "activeSkill": "Ice Shot",
+          "supports": [
+            "Greater Multiple Projectiles",
+            "Return",
+            "Greater Elemental Damage with Attacks",
+            "Greater Hypothermia"
+          ]
+        },
+        {
+          "activeSkill": "Vaal Ice Shot",
+          "supports": [
+            "Greater Multiple Projectiles",
+            "Return",
+            "Greater Elemental Damage with Attacks",
+            "Greater Hypothermia",
+            "Greater Cooldown Recovery"
+          ]
+        }
+      ],
+      "requiredAnyOfGroups": [
+        [ "Chain II", "Greater Fork" ]
+      ],
+      "forbiddenSkills": [
+        "Icicle Rain",
+        "Mirror Arrow"
+      ]
+    },
+    {
+      "name": "Kineticist",
+      "requiredSkills": [
+        "Kinetic Blast of Clustering",
+        "Greater Elemental Damage with Attacks"
+      ],
+      "requiredLinks": [
+        {
+          "activeSkill": "Kinetic Blast of Clustering",
+          "supports": [
+            "Greater Multiple Projectiles"
+          ]
+        }
+      ],
+      "requiredAnyOfGroups": [
+        [ "Greater Fork", "Chain II" ]
+      ],
+      "forbiddenSkills": [
+        "Barrage",
+        "Kinetic Rain of Impact",
+        "Flame Dash",
+        "Kinetic Bolt",
+        "Power Siphon"
+      ]
+    },
+    {
+      "name": "Smoulderstrike",
+      "requiredLinks": [
+        {
+          "activeSkill": "Vaal Molten Strike",
+          "supports": [
+            "Greater Multiple Projectiles"
+          ]
+        },
+        {
+          "activeSkill": "Molten Strike",
+          "supports": [
+            "Greater Multiple Projectiles",
+            "Greater Elemental Damage with Attacks",
+            "Gilded Molten Eruption"
+          ]
+        }
+      ],
+      "forbiddenSkills": [
+        "Infernal Blow",
+        "Flamebolt Strike"
+      ]
+    },
+    {
+      "name": "Sniper",
+      "requiredLinks": [
+        {
+          "activeSkill": "Tornado Shot",
+          "supports": [
+            "Greater Multiple Projectiles",
+            "Gilded Secondary Shots"
+          ]
+        }
+      ],
+      "requiredAnyOfGroups": [
+        [ "Chain II", "Greater Fork" ]
+      ],
+      "forbiddenSkills": [
+        "Shrapnel Ballista",
+        "Barrage of Volley Fire",
+        "Split Arrow",
+        "Puncture",
+        "Arrow Nova",
+        "Brutality"
+      ]
+    },
+    {
+      "name": "Combatant",
+      "requiredAnyLoadout": [
+        {
+          "name": "Frost Blades",
+          "requiredLinks": [
+            {
+              "activeSkill": "Frost Blades",
+              "supports": [
+                "Return",
+                "Greater Elemental Damage with Attacks",
+                "Greater Multiple Projectiles",
+                "Greater Multistrike",
+                "Greater Hypothermia"
+              ]
+            }
+          ],
+          "requiredAnyOfGroups": [
+            [ "Chain II", "Greater Pierce" ]
+          ]
+        },
+        {
+          "name": "Static Strike",
+          "requiredLinks": [
+            {
+              "activeSkill": "Static Strike",
+              "supports": [
+                "Greater More Duration",
+                "Greater Elemental Damage with Attacks",
+                "Chain II"
+              ]
+            }
+          ]
+        }
+      ],
+      "forbiddenSkills": [
+        "Wild Strike",
+        "Spectral Helix"
+      ]
+    },
+    {
+      "name": "Blade Ambusher",
+      "requiredLinks": [
+        {
+          "activeSkill": "Blade Trap",
+          "supports": [
+            "Multiple Traps",
+            "Greater Throwing Speed"
+          ]
+        },
+        {
+          "activeSkill": "Spectral Helix of Trarthus",
+          "supports": [
+            "Multiple Traps",
+            "Greater Throwing Speed"
+          ]
+        }
+      ],
+      "forbiddenSkills": [
+        "Spectral Throw of Trarthus",
+        "Smoke Mine",
+        "Flame Dash",
+        "Faster Projectiles"
+      ]
+    }
+  ]
+}
