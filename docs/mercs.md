@@ -18,9 +18,10 @@ Each named set is a wishlist. A **MATCH** banner shows when a set fully passes.
 | Rule | Meaning |
 | --- | --- |
 | **Required on active** | That skill must be present, and each listed support must be linked to it |
+| **Forbidden supports on active** | Listed under the same `requiredLinks` entry as `forbiddenSupports` — must not be linked to that active |
 | **Need one of** | At least one option in the group must be present |
 | **Either loadout** | Exactly one of the alternative packages must fully pass (Combatant) |
-| **Forbidden** | Must not appear on the merc at all |
+| **Forbidden** | Must not appear as an active skill on the merc |
 
 **Both** means every listed active package is required.  
 **Either** means only one package needs to pass.
@@ -54,8 +55,8 @@ Source of truth for the lists: **`skill-sets.json`** (next to the plugin). Edit 
 
 ## Kineticist — Kinetic Blast of Clustering
 
-- **Required:** GMP III (on KB of Clustering), WED III
-- **Need one of:** Greater Fork III, Chain II
+- **Required on KB of Clustering:** GMP III, WED III
+- **Need one of (on KB of Clustering):** Greater Fork III, Chain II
 
 ### Forbidden
 
@@ -83,17 +84,20 @@ Source of truth for the lists: **`skill-sets.json`** (next to the plugin). Edit 
 
 ## Sniper — Tornado Shot
 
-- **Required:** GMP III, Gilded Secondary Shots III
-- **Need one of:** Chain II, Greater Fork III
+- **Required on Tornado Shot:** GMP III, Gilded Secondary Shots III
+- **Need one of (on Tornado Shot):** Chain II, Greater Fork III
 
-### Forbidden
+### Forbidden on Tornado Shot (`forbiddenSupports`)
+
+- Arrow Nova (any tier)
+- Brutality (any tier)
+
+### Forbidden actives
 
 - Shrapnel Ballista
 - Barrage of Volley Fire
 - Split Arrow (not Greater Split Arrow)
 - Puncture
-- Arrow Nova III
-- Brutality (any tier)
 
 ---
 
@@ -124,12 +128,29 @@ Banner names the path: `MATCH: Combatant (Frost Blades)` or `MATCH: Combatant (S
 | Blade Trap | Multiple Traps III, Greater Throwing Speed III |
 | Spectral Helix of Trarthus | Multiple Traps III, Greater Throwing Speed III |
 
-### Forbidden
+### Forbidden on Spectral Helix of Trarthus (`forbiddenSupports`)
+
+- Faster Projectiles (any tier)
+
+### Forbidden actives
 
 - Spectral Throw of Trarthus
 - Smoke Mine
 - Flame Dash
-- Faster Projectiles (any tier)
+
+---
+
+## Bloodletter — Bladestorm
+
+- **Required on Bladestorm:** Melee Physical Damage, Greater Brutality, Increased Area of Effect
+
+### Forbidden on Bladestorm (`forbiddenSupports`)
+
+- Greater Ailment Damage
+
+### Forbidden actives
+
+- Leap Slam
 
 ---
 

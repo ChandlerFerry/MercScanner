@@ -34,14 +34,14 @@
     {
       "name": "Kineticist",
       "requiredSkills": [
-        "Kinetic Blast of Clustering",
-        "Greater Elemental Damage with Attacks"
+        "Kinetic Blast of Clustering"
       ],
       "requiredLinks": [
         {
           "activeSkill": "Kinetic Blast of Clustering",
           "supports": [
-            "Greater Multiple Projectiles"
+            "Greater Multiple Projectiles",
+            "Greater Elemental Damage with Attacks"
           ]
         }
       ],
@@ -87,6 +87,10 @@
           "supports": [
             "Greater Multiple Projectiles",
             "Gilded Secondary Shots"
+          ],
+          "forbiddenSupports": [
+            "Brutality",
+            "Arrow Nova"
           ]
         }
       ],
@@ -97,9 +101,7 @@
         "Shrapnel Ballista",
         "Barrage of Volley Fire",
         "Split Arrow",
-        "Puncture",
-        "Arrow Nova",
-        "Brutality"
+        "Puncture"
       ]
     },
     {
@@ -157,14 +159,35 @@
           "supports": [
             "Multiple Traps",
             "Greater Throwing Speed"
+          ],
+          "forbiddenSupports": [
+            "Faster Projectiles"
           ]
         }
       ],
       "forbiddenSkills": [
         "Spectral Throw of Trarthus",
         "Smoke Mine",
-        "Flame Dash",
-        "Faster Projectiles"
+        "Flame Dash"
+      ]
+    },
+    {
+      "name": "Bloodletter",
+      "requiredLinks": [
+        {
+          "activeSkill": "Bladestorm",
+          "supports": [
+            "Melee Physical Damage",
+            "Greater Brutality",
+            "Increased Area of Effect"
+          ],
+          "forbiddenSupports": [
+            "Greater Ailment Damage"
+          ]
+        }
+      ],
+      "forbiddenSkills": [
+        "Leap Slam"
       ]
     }
   ]

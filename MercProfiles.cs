@@ -20,20 +20,19 @@ public sealed class MercSkillSnapshot(string name, IReadOnlyList<string> support
 
 public sealed class LinkedSupportRequirement
 {
-    public LinkedSupportRequirement(string activeSkill, params string[] supports)
+    public LinkedSupportRequirement(
+        string activeSkill,
+        IReadOnlyList<string> supports = null,
+        IReadOnlyList<string> forbiddenSupports = null)
     {
         ActiveSkill = activeSkill;
         Supports = supports ?? [];
-    }
-
-    public LinkedSupportRequirement(string activeSkill, IReadOnlyList<string> supports)
-    {
-        ActiveSkill = activeSkill;
-        Supports = supports ?? [];
+        ForbiddenSupports = forbiddenSupports ?? [];
     }
 
     public string ActiveSkill { get; }
     public IReadOnlyList<string> Supports { get; }
+    public IReadOnlyList<string> ForbiddenSupports { get; }
 }
 
 public sealed class MercLoadout(
@@ -145,7 +144,10 @@ public static class MercProfiles
     {
         return [.. (links ?? [])
             .Where(l => l != null && !string.IsNullOrWhiteSpace(l.ActiveSkill))
-            .Select(l => new LinkedSupportRequirement(l.ActiveSkill, l.Supports ?? []))];
+            .Select(l => new LinkedSupportRequirement(
+                l.ActiveSkill,
+                l.Supports ?? [],
+                l.ForbiddenSupports ?? []))];
     }
 
     private static IReadOnlyList<IReadOnlyList<string>> MapAnyOfGroups(List<List<string>> groups)
@@ -206,6 +208,9 @@ public static class MercProfiles
 
         [JsonProperty("supports")]
         public List<string> Supports { get; set; }
+
+        [JsonProperty("forbiddenSupports")]
+        public List<string> ForbiddenSupports { get; set; }
     }
 
     #endregion
@@ -277,6 +282,49 @@ public static class MercProfiles
     public static MercSkillSnapshot FindSkill(IReadOnlyList<MercSkillSnapshot> skills, string pattern)
     {
         return skills.FirstOrDefault(s => SkillNameMatches(s.Name, pattern));
+    }
+
+    public static IEnumerable<string> RelevantActivePatterns(MercSkillSet set)
+    {
+        foreach (var required in set.RequiredSkills)
+            yield return required;
+
+        foreach (var link in set.RequiredLinks)
+            yield return link.ActiveSkill;
+    }
+
+    public static IEnumerable<string> RelevantActivePatterns(MercLoadout loadout)
+    {
+        foreach (var link in loadout.RequiredLinks)
+            yield return link.ActiveSkill;
+    }
+
+    public static bool HasOptionOnActives(
+        IReadOnlyList<MercSkillSnapshot> skills,
+        IEnumerable<string> activePatterns,
+        string pattern)
+    {
+        if (string.IsNullOrWhiteSpace(pattern))
+            return false;
+
+        var actives = activePatterns?.Where(a => !string.IsNullOrWhiteSpace(a)).ToList() ?? [];
+
+        foreach (var skill in skills)
+        {
+            if (SkillNameMatches(skill.Name, pattern))
+                return true;
+
+            if (actives.Count == 0)
+                continue;
+
+            if (!actives.Any(a => SkillNameMatches(skill.Name, a)))
+                continue;
+
+            if (skill.Supports.Any(sup => SkillNameMatches(sup, pattern)))
+                return true;
+        }
+
+        return false;
     }
 
     public static bool MatchesType(string metadata, string path, string renderName, MercSkillSet set)
@@ -375,22 +423,23 @@ public static class MercProfiles
 
         foreach (var forbidden in set.ForbiddenSkills)
         {
-            if (HasSkillOrSupport(skills, forbidden))
+            if (HasSkill(skills.Select(s => s.Name), forbidden))
                 return false;
         }
 
         foreach (var required in set.RequiredSkills)
         {
-            if (!HasSkillOrSupport(skills, required))
+            if (!HasSkill(skills.Select(s => s.Name), required))
                 return false;
         }
 
+        var setActives = RelevantActivePatterns(set).ToList();
         foreach (var group in set.RequiredAnyOfGroups)
         {
             if (group == null || group.Count == 0)
                 continue;
 
-            if (!group.Any(option => HasSkillOrSupport(skills, option)))
+            if (!group.Any(option => HasOptionOnActives(skills, setActives, option)))
                 return false;
         }
 
@@ -431,12 +480,13 @@ public static class MercProfiles
                 return false;
         }
 
+        var loadoutActives = RelevantActivePatterns(loadout).ToList();
         foreach (var group in loadout.RequiredAnyOfGroups)
         {
             if (group == null || group.Count == 0)
                 continue;
 
-            if (!group.Any(option => HasSkillOrSupport(skills, option)))
+            if (!group.Any(option => HasOptionOnActives(skills, loadoutActives, option)))
                 return false;
         }
 
@@ -455,6 +505,12 @@ public static class MercProfiles
                 return false;
         }
 
+        foreach (var forbidden in link.ForbiddenSupports)
+        {
+            if (ActiveSkillHasSupport(active, forbidden, skills))
+                return false;
+        }
+
         return true;
     }
 
@@ -463,25 +519,89 @@ public static class MercProfiles
         if (set.RequiredSkills.Any(r => SkillNameMatches(skillName, r)))
             return true;
 
-        if (set.RequiredLinks.Any(l => SkillNameMatches(skillName, l.ActiveSkill)
-                                       || l.Supports.Any(s => SkillNameMatches(skillName, s))))
+        if (set.RequiredLinks.Any(l => SkillNameMatches(skillName, l.ActiveSkill)))
             return true;
 
-        foreach (var group in set.RequiredAnyOfGroups)
+        foreach (var loadout in set.RequiredAnyLoadout)
         {
-            if (group != null && group.Any(option => SkillNameMatches(skillName, option)))
+            if (loadout.RequiredLinks.Any(l => SkillNameMatches(skillName, l.ActiveSkill)))
+                return true;
+        }
+
+        return false;
+    }
+
+    public static bool IsRequiredSupportOnActive(string activeSkillName, string supportName, MercSkillSet set)
+    {
+        if (string.IsNullOrWhiteSpace(activeSkillName) || string.IsNullOrWhiteSpace(supportName))
+            return false;
+
+        foreach (var link in set.RequiredLinks)
+        {
+            if (!SkillNameMatches(activeSkillName, link.ActiveSkill))
+                continue;
+
+            if (link.Supports.Any(s => SkillNameMatches(supportName, s)))
+                return true;
+        }
+
+        var setActives = RelevantActivePatterns(set).ToList();
+        if (setActives.Any(a => SkillNameMatches(activeSkillName, a)))
+        {
+            foreach (var group in set.RequiredAnyOfGroups)
+            {
+                if (group != null && group.Any(option => SkillNameMatches(supportName, option)))
+                    return true;
+            }
+        }
+
+        foreach (var loadout in set.RequiredAnyLoadout)
+        {
+            foreach (var link in loadout.RequiredLinks)
+            {
+                if (!SkillNameMatches(activeSkillName, link.ActiveSkill))
+                    continue;
+
+                if (link.Supports.Any(s => SkillNameMatches(supportName, s)))
+                    return true;
+            }
+
+            var loadoutActives = RelevantActivePatterns(loadout).ToList();
+            if (!loadoutActives.Any(a => SkillNameMatches(activeSkillName, a)))
+                continue;
+
+            foreach (var group in loadout.RequiredAnyOfGroups)
+            {
+                if (group != null && group.Any(option => SkillNameMatches(supportName, option)))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static bool IsForbiddenSupportOnActive(string activeSkillName, string supportName, MercSkillSet set)
+    {
+        if (string.IsNullOrWhiteSpace(activeSkillName) || string.IsNullOrWhiteSpace(supportName))
+            return false;
+
+        foreach (var link in set.RequiredLinks)
+        {
+            if (!SkillNameMatches(activeSkillName, link.ActiveSkill))
+                continue;
+
+            if (link.ForbiddenSupports.Any(s => SkillNameMatches(supportName, s)))
                 return true;
         }
 
         foreach (var loadout in set.RequiredAnyLoadout)
         {
-            if (loadout.RequiredLinks.Any(l => SkillNameMatches(skillName, l.ActiveSkill)
-                                               || l.Supports.Any(s => SkillNameMatches(skillName, s))))
-                return true;
-
-            foreach (var group in loadout.RequiredAnyOfGroups)
+            foreach (var link in loadout.RequiredLinks)
             {
-                if (group != null && group.Any(option => SkillNameMatches(skillName, option)))
+                if (!SkillNameMatches(activeSkillName, link.ActiveSkill))
+                    continue;
+
+                if (link.ForbiddenSupports.Any(s => SkillNameMatches(supportName, s)))
                     return true;
             }
         }
