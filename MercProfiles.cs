@@ -226,26 +226,8 @@ public static class MercProfiles
         if (string.IsNullOrEmpty(left) || string.IsNullOrEmpty(right))
             return false;
 
-        if (left.Equals(right, StringComparison.InvariantCultureIgnoreCase))
-            return true;
-
-        if (left.StartsWith(right + " of ", StringComparison.InvariantCultureIgnoreCase))
-            return true;
-
-        foreach (var prefix in new[] { "Greater ", "Lesser ", "Vaal ", "Awakened ", "Gilded " })
-        {
-            if (!left.StartsWith(prefix, StringComparison.InvariantCultureIgnoreCase) ||
-                right.StartsWith(prefix, StringComparison.InvariantCultureIgnoreCase))
-                continue;
-
-            var rest = left[prefix.Length..];
-            if (rest.Equals(right, StringComparison.InvariantCultureIgnoreCase))
-                return false;
-            if (rest.StartsWith(right + " of ", StringComparison.InvariantCultureIgnoreCase))
-                return false;
-        }
-
-        return left.Contains(right, StringComparison.InvariantCultureIgnoreCase);
+        // Exact name only (after strip of " Support" / Roman tiers). No "of" variants, prefixes, or substring matches.
+        return left.Equals(right, StringComparison.InvariantCultureIgnoreCase);
     }
 
     public static string NormalizeSkillName(string name)
