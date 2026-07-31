@@ -15,6 +15,13 @@ public class MercScanner : BaseSettingsPlugin<MercScannerSettings>
 {
     private static readonly int[] SkillListIndices = [2, 10, 0, 1, 0];
 
+    // Rank 1 = best. Dark green (not lime), orange, blue.
+    private static readonly Color Tier1Color = new(20, 110, 40, 255);
+    private static readonly Color Tier2Color = new(220, 120, 20, 255);
+    private static readonly Color Tier3Color = new(50, 120, 200, 255);
+    private static readonly Color MatchColor = Tier1Color;
+    private static readonly Color ValuableItemColor = Tier1Color;
+
     private bool _loggedMissingNinjaPrice;
 
     public override bool Initialise()
@@ -60,38 +67,66 @@ public class MercScanner : BaseSettingsPlugin<MercScannerSettings>
         var skills = uiSkills
             .Select(s => new MercSkillSnapshot(s.Name, s.Supports.Select(x => x.Name).ToList()))
             .ToList();
-        var matchingSets = MercProfiles.SkillSets
-            .Where(set => MercProfiles.IsFullMatch(skills, set))
+        var matches = MercProfiles.SkillSets
+            .Select(set => MercProfiles.GetBestMatch(skills, set))
+            .Where(m => m != null)
             .ToList();
 
-        if (matchingSets.Count > 0)
-            DrawElementFrame(window.RematchButton, Settings.MatchColor);
+        if (matches.Count > 0)
+            DrawElementFrame(window.RematchButton, ColorForMatch(BestMatch(matches)));
 
-        DrawSkillBorders(uiSkills, matchingSets);
+        DrawSkillBorders(uiSkills, matches);
         RenderValuableRucksackAlerts(window);
     }
 
-    private void DrawSkillBorders(List<UiSkill> uiSkills, List<MercSkillSet> matchingSets)
+    private void DrawSkillBorders(List<UiSkill> uiSkills, List<MercMatch> matches)
     {
         foreach (var skill in uiSkills)
         {
-            if (TryColorForRole(ClassifyActive(skill.Name), matchingSets, out var skillColor))
+            // Active skills only highlight on a set match (or as forbidden).
+            // Partial "required" blue is for supports, not the skill name itself.
+            if (TryColorForActive(skill.Name, matches, out var skillColor))
                 DrawElementFrame(skill.NameElement, skillColor);
 
             foreach (var support in skill.Supports)
             {
-                if (TryColorForRole(ClassifySupport(skill.Name, support.Name), matchingSets, out var supportColor))
+                if (TryColorForSupport(skill.Name, support.Name, matches, out var supportColor))
                     DrawElementFrame(support.Slot, supportColor);
             }
         }
     }
 
-    private bool TryColorForRole(SkillRole role, List<MercSkillSet> matchingSets, out Color color)
+    private bool TryColorForActive(string skillName, List<MercMatch> matches, out Color color)
     {
-        switch (role)
+        var bestForSkill = matches
+            .Where(m => MercProfiles.IsRequiredSkillName(skillName, m.Set))
+            .OrderBy(m => m.Rank) // 1 = best
+            .FirstOrDefault();
+
+        if (bestForSkill != null)
+        {
+            color = ColorForMatch(bestForSkill);
+            return true;
+        }
+
+        if (ClassifyActive(skillName) == SkillRole.Forbidden)
+        {
+            color = Settings.ForbiddenSkillColor;
+            return true;
+        }
+
+        color = default;
+        return false;
+    }
+
+    private bool TryColorForSupport(string activeSkillName, string supportName, List<MercMatch> matches, out Color color)
+    {
+        switch (ClassifySupport(activeSkillName, supportName))
         {
             case SkillRole.Required:
-                color = matchingSets.Count > 0 ? Settings.MatchColor : Settings.RequiredSkillColor;
+                color = matches.Count > 0
+                    ? ColorForMatch(BestMatch(matches))
+                    : Settings.RequiredSkillColor;
                 return true;
             case SkillRole.Forbidden:
                 color = Settings.ForbiddenSkillColor;
@@ -100,6 +135,27 @@ public class MercScanner : BaseSettingsPlugin<MercScannerSettings>
                 color = default;
                 return false;
         }
+    }
+
+    private static MercMatch BestMatch(List<MercMatch> matches) =>
+        matches.OrderBy(m => m.Rank).First(); // 1 = best
+
+    private static Color ColorForMatch(MercMatch match)
+    {
+        if (match == null)
+            return MatchColor;
+
+        // Single-band sets (e.g. Sniper Full) use best-tier green.
+        if (match.Set.Tiers.Count <= 1)
+            return MatchColor;
+
+        return match.Rank switch
+        {
+            1 => Tier1Color,
+            2 => Tier2Color,
+            3 => Tier3Color,
+            _ => MatchColor,
+        };
     }
 
     private void RenderValuableRucksackAlerts(MercenaryEncounterWindow window)
@@ -142,10 +198,10 @@ public class MercScanner : BaseSettingsPlugin<MercScannerSettings>
 
         foreach (var (_, _, rect) in valuables)
         {
-            Graphics.DrawFrame(rect, Settings.ValuableItemColor, 3);
+            Graphics.DrawFrame(rect, ValuableItemColor, 3);
         }
 
-        DrawElementFrame(window.TakeItemButton, Settings.ValuableItemColor);
+        DrawElementFrame(window.TakeItemButton, ValuableItemColor);
     }
 
     private void DrawElementFrame(Element element, Color color)
@@ -337,7 +393,7 @@ public class MercScanner : BaseSettingsPlugin<MercScannerSettings>
     {
         foreach (var set in MercProfiles.SkillSets)
         {
-            if (set.ForbiddenSkills.Any(f => MercProfiles.SkillNameMatches(skillName, f)))
+            if (MercProfiles.IsForbiddenSkillName(skillName, set))
                 return SkillRole.Forbidden;
             if (MercProfiles.IsRequiredSkillName(skillName, set))
                 return SkillRole.Required;

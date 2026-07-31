@@ -9,148 +9,101 @@ All skill and item checks run while the **mercenary encounter window** is open:
 - **Items:** `MercenaryEncounterWindow.Inventories`
 - **Skills + supports:** UI skill lines under the window (`2 → 10 → 0 → 1 → 0`), each child one skill row; supports under that row with names from cold tooltip text
 
-The overlay debug-draws every skill and support it parsed. **MATCH** banners use those real gem links (support must sit on the listed active).
-
 ## Match rules
 
-Each named set is a wishlist. A **MATCH** banner shows when a set fully passes.
+Every set is **tier-only**. The rematch button highlights when any set matches (color = best tier rank).
 
 | Rule | Meaning |
 | --- | --- |
-| **Required on active** | That skill must be present, and each listed support must be linked to it |
-| **Forbidden supports on active** | Listed under the same `requiredLinks` entry as `forbiddenSupports` — must not be linked to that active |
-| **Need one of** | At least one option in the group must be present |
-| **Either loadout** | Exactly one of the alternative packages must fully pass (Combatant) |
-| **Forbidden** | Must not appear as an active skill on the merc |
+| **Tiers** | Ordered **best → worst** in JSON. First band that fully passes wins (rank 1 = best) |
+| **Required on active** | That skill must be present; each listed support must be linked to it (empty supports = skill present only) |
+| **Forbidden supports on active** | On that link’s `forbiddenSupports` — must not be linked to that active |
+| **Need one of** | At least one option in the group on the relevant actives |
+| **Either loadout** | On a tier: exactly one of `requiredAnyLoadout` packages must pass |
+| **Forbidden (set)** | Must not appear as an active — blocks all tiers, red highlight |
+| **Forbidden (tier)** | Blocks only that tier (e.g. Mirror Arrow on Better; Sellable still ok) |
 
-**Both** means every listed active package is required.  
-**Either** means only one package needs to pass.
+### Colors (hardcoded)
 
-Supports are checked per active skill when the game exposes useful stats (e.g. GMP via additional projectiles). Otherwise presence of the support name on the merc is used. Overlay tags look like `Molten Strike [+GMP3 +WED3]`.
+| Rank | Meaning | Color |
+| --- | --- | --- |
+| 1 | Best | Dark green |
+| 2 | Mid | Orange |
+| 3 | Floor / third band | Blue |
+| single-band | e.g. Sniper Full | Dark green (same as rank 1) |
+| Valuable items | — | Dark green |
 
-Rucksack/gear valuables are a separate path: any merc type, only while the hire/encounter window is open.
+Active skill names highlight only when a tier matches. Supports still show partial blue for wishlist gems.
 
-Source of truth for the lists: **`skill-sets.json`** (next to the plugin). Edit that file and reload the plugin.
+Source of truth: **`skill-sets.json`** (next to the plugin). Edit and reload the plugin.
 
 ---
 
-## Manyshot — both Ice Shot and Vaal Ice Shot
+## Manyshot (best → floor)
 
-### Ice Shot
+| Rank | Tier | Requirements |
+| --- | --- | --- |
+| 1 | **Better** | Ice + Vaal with GMP, Return, WED, Hypothermia; Vaal also CDR; Chain\|Fork; **no Mirror Arrow** |
+| 2 | **Sellable** | Ice + Vaal each with **Return** (Mirror Arrow ok) |
 
-- **Required:** GMP III, Return III, WED III, Greater Hypothermia III
-- **Need one of:** Chain II, Greater Fork III
-
-### Vaal Ice Shot
-
-- **Required:** GMP III, Return III, WED III, Greater Hypothermia III, Greater Cooldown Recovery III
-- **Need one of:** Chain II, Greater Fork III (same group as above)
-
-### Forbidden
-
-- Icicle Rain
-- Mirror Arrow
+**Forbidden (all tiers):** Icicle Rain
 
 ---
 
 ## Kineticist — Kinetic Blast of Clustering
 
-- **Required on KB of Clustering:** GMP III, WED III
-- **Need one of (on KB of Clustering):** Greater Fork III, Chain II
+| Rank | Tier | On KB of Clustering |
+| --- | --- | --- |
+| 1 | **Better** | GMP + WED + (Fork\|Chain) |
+| 2 | **Sellable** | GMP + (Fork\|Chain) |
 
-### Forbidden
-
-- Barrage
-- Kinetic Rain of Impact
-- Flame Dash
-- Kinetic Bolt
-- Power Siphon
+**Forbidden:** Barrage, Kinetic Rain of Impact, Flame Dash, Kinetic Bolt, Power Siphon
 
 ---
 
-## Smoulderstrike — both Vaal Molten Strike and Molten Strike
+## Smoulderstrike
 
-| Active | Required supports |
-| --- | --- |
-| Vaal Molten Strike | GMP III only |
-| Molten Strike | GMP III, WED III, Gilded Molten Eruption III |
+| Rank | Tier | Requirements |
+| --- | --- | --- |
+| 1 | **Better** | Both skills; Vaal GMP; MS GMP + WED + Gilded Eruption |
+| 2 | **Sellable** | Both skills, each **GMP** |
 
-### Forbidden
-
-- Infernal Blow (any variant)
-- Flamebolt Strike
+**Forbidden:** Infernal Blow, Flamebolt Strike
 
 ---
 
-## Sniper — Tornado Shot
+## Sniper — Tornado Shot (single band)
 
-- **Required on Tornado Shot:** GMP III, Gilded Secondary Shots III
-- **Need one of (on Tornado Shot):** Chain II, Greater Fork III
+Full package only (`Full`, dark green):
 
-### Forbidden on Tornado Shot (`forbiddenSupports`)
+- GMP + Gilded Secondary Shots
+- Need one of: Chain II / Greater Fork
+- Forbidden supports on TS: Brutality, Arrow Nova
 
-- Arrow Nova (any tier)
-- Brutality (any tier)
-
-### Forbidden actives
-
-- Shrapnel Ballista
-- Barrage of Volley Fire
-- Split Arrow (not Greater Split Arrow)
-- Puncture
+**Forbidden actives:** Shrapnel Ballista, Barrage of Volley Fire, Split Arrow, Puncture
 
 ---
 
 ## Combatant — either Frost Blades or Static Strike
 
-### Frost Blades
+| Rank | Tier | Frost Blades path | Static Strike path |
+| --- | --- | --- | --- |
+| 1 | **Better** | Return + WED + GMP + Multistrike + Hypo + (Chain\|Pierce) | More Duration + WED + Chain |
+| 2 | **Sellable** | Return + (Chain\|Pierce) | More Duration + Chain + Increased Area of Effect |
 
-- **Required:** Return III, WED III, GMP III, Greater Multistrike III, Greater Hypothermia III
-- **Need one of:** Chain II, Greater Pierce III
-
-### Static Strike
-
-- **Required:** Greater More Duration III, WED III, Chain II
-
-### Forbidden (either path)
-
-- Wild Strike
-- Spectral Helix
-
-Banner names the path: `MATCH: Combatant (Frost Blades)` or `MATCH: Combatant (Static Strike)`.
+**Forbidden:** Spectral Helix  
+Wild Strike is allowed (no special highlight).
 
 ---
 
-## Blade Ambusher — both Blade Trap and Spectral Helix of Trarthus
+## Blade Ambusher
 
-| Active | Required supports |
-| --- | --- |
-| Blade Trap | Multiple Traps III, Greater Throwing Speed III |
-| Spectral Helix of Trarthus | Multiple Traps III, Greater Throwing Speed III |
+| Rank | Tier | Blade Trap | Spectral Helix of Trarthus | Spectral Throw of Trarthus |
+| --- | --- | --- | --- | --- |
+| 1 | **Better** | Multi Traps + Greater Throwing Speed | Multi Traps + Throw Speed + Slower Proj; **no** Faster Proj | Multiple Traps |
+| 2 | **Sellable** | Multiple Traps | Multiple Traps | Present (any supports) |
 
-### Forbidden on Spectral Helix of Trarthus (`forbiddenSupports`)
-
-- Faster Projectiles (any tier)
-
-### Forbidden actives
-
-- Spectral Throw of Trarthus
-- Smoke Mine
-- Flame Dash
-
----
-
-## Bloodletter — Bladestorm
-
-- **Required on Bladestorm:** Melee Physical Damage, Greater Brutality, Increased Area of Effect
-
-### Forbidden on Bladestorm (`forbiddenSupports`)
-
-- Greater Ailment Damage
-
-### Forbidden actives
-
-- Leap Slam
+**Forbidden actives:** Smoke Mine, Flame Dash
 
 ---
 

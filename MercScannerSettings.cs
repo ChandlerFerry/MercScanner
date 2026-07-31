@@ -12,8 +12,8 @@ public class MercScannerSettings : ISettings
 
     public RangeNode<float> AlertMinChaosValue { get; set; } = new RangeNode<float>(10f, 0f, 100000f);
 
-    public ColorNode MatchColor { get; set; } = new ColorNode(Color.Lime.ToSharpDx());
+    // Match / tier / valuable colors are hardcoded in MercScanner (dark green / orange / blue).
+
     public ColorNode ForbiddenSkillColor { get; set; } = new ColorNode(Color.OrangeRed.ToSharpDx());
     public ColorNode RequiredSkillColor { get; set; } = new ColorNode(Color.DeepSkyBlue.ToSharpDx());
-    public ColorNode ValuableItemColor { get; set; } = new ColorNode(Color.Gold.ToSharpDx());
 }

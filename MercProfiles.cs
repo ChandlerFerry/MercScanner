@@ -45,22 +45,61 @@ public sealed class MercLoadout(
     public IReadOnlyList<IReadOnlyList<string>> RequiredAnyOfGroups { get; } = requiredAnyOfGroups ?? [];
 }
 
+/// <summary>
+/// One quality band for a skill set. Tiers are ordered best→worst in JSON;
+/// rank is 1-based index (1 = best). First matching tier wins.
+/// </summary>
+public sealed class MercTierSpec(
+    string name,
+    IReadOnlyList<LinkedSupportRequirement> requiredLinks = null,
+    IReadOnlyList<IReadOnlyList<string>> requiredAnyOfGroups = null,
+    IReadOnlyList<string> requiredSkills = null,
+    IReadOnlyList<MercLoadout> requiredAnyLoadout = null,
+    IReadOnlyList<string> forbiddenSkills = null)
+{
+    public string Name { get; } = name;
+    public IReadOnlyList<string> RequiredSkills { get; } = requiredSkills ?? [];
+    public IReadOnlyList<LinkedSupportRequirement> RequiredLinks { get; } = requiredLinks ?? [];
+    public IReadOnlyList<IReadOnlyList<string>> RequiredAnyOfGroups { get; } = requiredAnyOfGroups ?? [];
+    public IReadOnlyList<MercLoadout> RequiredAnyLoadout { get; } = requiredAnyLoadout ?? [];
+    /// <summary>Extra forbids beyond set-level (e.g. Mirror Arrow only on Better).</summary>
+    public IReadOnlyList<string> ForbiddenSkills { get; } = forbiddenSkills ?? [];
+}
+
+public sealed class MercMatch(MercSkillSet set, int rank, string tierName, string loadoutName = null)
+{
+    public MercSkillSet Set { get; } = set;
+    /// <summary>1 = best, higher = worse.</summary>
+    public int Rank { get; } = rank;
+    public string TierName { get; } = tierName ?? "";
+    public string LoadoutName { get; } = loadoutName;
+    public string DisplayName
+    {
+        get
+        {
+            var baseName = string.IsNullOrWhiteSpace(TierName)
+                ? Set.Name
+                : $"{Set.Name} ({TierName})";
+            return string.IsNullOrWhiteSpace(LoadoutName)
+                ? baseName
+                : $"{baseName} [{LoadoutName}]";
+        }
+    }
+}
+
 public sealed class MercSkillSet(
     string name,
+    IReadOnlyList<MercTierSpec> tiers = null,
     IReadOnlyList<string> requiredSkills = null,
     IReadOnlyList<string> forbiddenSkills = null,
-    IReadOnlyList<IReadOnlyList<string>> requiredAnyOfGroups = null,
-    IReadOnlyList<LinkedSupportRequirement> requiredLinks = null,
-    IReadOnlyList<MercLoadout> requiredAnyLoadout = null,
     IReadOnlyList<string> typeMatchers = null)
 {
     public string Name { get; } = name;
     public IReadOnlyList<string> TypeMatchers { get; } = typeMatchers ?? [];
+    /// <summary>Actives required on every tier (optional convenience).</summary>
     public IReadOnlyList<string> RequiredSkills { get; } = requiredSkills ?? [];
-    public IReadOnlyList<IReadOnlyList<string>> RequiredAnyOfGroups { get; } = requiredAnyOfGroups ?? [];
-    public IReadOnlyList<LinkedSupportRequirement> RequiredLinks { get; } = requiredLinks ?? [];
-    public IReadOnlyList<MercLoadout> RequiredAnyLoadout { get; } = requiredAnyLoadout ?? [];
     public IReadOnlyList<string> ForbiddenSkills { get; } = forbiddenSkills ?? [];
+    public IReadOnlyList<MercTierSpec> Tiers { get; } = tiers ?? [];
 }
 
 public static class MercProfiles
@@ -127,18 +166,42 @@ public static class MercProfiles
     {
         return new MercSkillSet(
             name: dto.Name,
+            tiers: MapTiers(dto.Tiers),
             requiredSkills: dto.RequiredSkills,
             forbiddenSkills: dto.ForbiddenSkills,
-            requiredAnyOfGroups: MapAnyOfGroups(dto.RequiredAnyOfGroups),
-            requiredLinks: MapLinks(dto.RequiredLinks),
-            requiredAnyLoadout: [.. (dto.RequiredAnyLoadout ?? [])
-                .Where(l => l != null && !string.IsNullOrWhiteSpace(l.Name))
-                .Select(l => new MercLoadout(
-                    l.Name,
-                    MapLinks(l.RequiredLinks),
-                    MapAnyOfGroups(l.RequiredAnyOfGroups)))],
             typeMatchers: dto.TypeMatchers);
     }
+
+    private static IReadOnlyList<MercTierSpec> MapTiers(List<TierDto> tiers)
+    {
+        return [.. (tiers ?? [])
+            .Where(t => t != null)
+            .Select((t, i) => new MercTierSpec(
+                name: string.IsNullOrWhiteSpace(t.Name) ? DefaultTierName(i + 1) : t.Name.Trim(),
+                requiredLinks: MapLinks(t.RequiredLinks),
+                requiredAnyOfGroups: MapAnyOfGroups(t.RequiredAnyOfGroups),
+                requiredSkills: t.RequiredSkills,
+                requiredAnyLoadout: MapLoadouts(t.RequiredAnyLoadout),
+                forbiddenSkills: t.ForbiddenSkills))];
+    }
+
+    private static IReadOnlyList<MercLoadout> MapLoadouts(List<LoadoutDto> loadouts)
+    {
+        return [.. (loadouts ?? [])
+            .Where(l => l != null && !string.IsNullOrWhiteSpace(l.Name))
+            .Select(l => new MercLoadout(
+                l.Name,
+                MapLinks(l.RequiredLinks),
+                MapAnyOfGroups(l.RequiredAnyOfGroups)))];
+    }
+
+    private static string DefaultTierName(int rank) => rank switch
+    {
+        1 => "Best",
+        2 => "Better",
+        3 => "Sellable",
+        _ => $"T{rank}",
+    };
 
     private static IReadOnlyList<LinkedSupportRequirement> MapLinks(List<LinkDto> links)
     {
@@ -176,14 +239,8 @@ public static class MercProfiles
         [JsonProperty("requiredSkills")]
         public List<string> RequiredSkills { get; set; }
 
-        [JsonProperty("requiredLinks")]
-        public List<LinkDto> RequiredLinks { get; set; }
-
-        [JsonProperty("requiredAnyOfGroups")]
-        public List<List<string>> RequiredAnyOfGroups { get; set; }
-
-        [JsonProperty("requiredAnyLoadout")]
-        public List<LoadoutDto> RequiredAnyLoadout { get; set; }
+        [JsonProperty("tiers")]
+        public List<TierDto> Tiers { get; set; }
 
         [JsonProperty("forbiddenSkills")]
         public List<string> ForbiddenSkills { get; set; }
@@ -199,6 +256,27 @@ public static class MercProfiles
 
         [JsonProperty("requiredAnyOfGroups")]
         public List<List<string>> RequiredAnyOfGroups { get; set; }
+    }
+
+    private sealed class TierDto
+    {
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        [JsonProperty("requiredSkills")]
+        public List<string> RequiredSkills { get; set; }
+
+        [JsonProperty("requiredLinks")]
+        public List<LinkDto> RequiredLinks { get; set; }
+
+        [JsonProperty("requiredAnyOfGroups")]
+        public List<List<string>> RequiredAnyOfGroups { get; set; }
+
+        [JsonProperty("requiredAnyLoadout")]
+        public List<LoadoutDto> RequiredAnyLoadout { get; set; }
+
+        [JsonProperty("forbiddenSkills")]
+        public List<string> ForbiddenSkills { get; set; }
     }
 
     private sealed class LinkDto
@@ -271,8 +349,26 @@ public static class MercProfiles
         foreach (var required in set.RequiredSkills)
             yield return required;
 
-        foreach (var link in set.RequiredLinks)
+        foreach (var tier in set.Tiers)
+        {
+            foreach (var pattern in RelevantActivePatterns(tier))
+                yield return pattern;
+        }
+    }
+
+    public static IEnumerable<string> RelevantActivePatterns(MercTierSpec tier)
+    {
+        foreach (var required in tier.RequiredSkills)
+            yield return required;
+
+        foreach (var link in tier.RequiredLinks)
             yield return link.ActiveSkill;
+
+        foreach (var loadout in tier.RequiredAnyLoadout)
+        {
+            foreach (var pattern in RelevantActivePatterns(loadout))
+                yield return pattern;
+        }
     }
 
     public static IEnumerable<string> RelevantActivePatterns(MercLoadout loadout)
@@ -372,6 +468,9 @@ public static class MercProfiles
             return "CDR";
         if (n.Contains("More Duration", StringComparison.OrdinalIgnoreCase))
             return "MoreDur";
+        if (n.Contains("Increased Area of Effect", StringComparison.OrdinalIgnoreCase)
+            || n.Contains("Area of Effect", StringComparison.OrdinalIgnoreCase))
+            return "AoE";
         if (n.Contains("Multistrike", StringComparison.OrdinalIgnoreCase))
             return "Multi";
         if (n.Contains("Pierce", StringComparison.OrdinalIgnoreCase)
@@ -391,23 +490,65 @@ public static class MercProfiles
             return "Brut";
         if (n.Contains("Arrow Nova", StringComparison.OrdinalIgnoreCase))
             return "ArrowNova";
+        if (n.Contains("Slower Projectiles", StringComparison.OrdinalIgnoreCase))
+            return "SlowProj";
+        if (n.Contains("Faster Projectiles", StringComparison.OrdinalIgnoreCase))
+            return "FastProj";
         return supportName;
     }
 
-    public static bool IsFullMatch(IReadOnlyList<MercSkillSnapshot> skills, MercSkillSet set)
+    /// <summary>
+    /// Best tier that matches. Tiers are ordered best→worst; first match wins (rank 1 = best).
+    /// </summary>
+    public static MercMatch GetBestMatch(IReadOnlyList<MercSkillSnapshot> skills, MercSkillSet set)
     {
-        if (set.RequiredSkills.Count == 0 &&
-            set.RequiredAnyOfGroups.Count == 0 &&
-            set.RequiredLinks.Count == 0 &&
-            set.RequiredAnyLoadout.Count == 0 &&
-            set.ForbiddenSkills.Count == 0)
+        if (set == null || set.Tiers.Count == 0)
+            return null;
+
+        if (HasAnyForbidden(skills, set.ForbiddenSkills))
+            return null;
+
+        for (var i = 0; i < set.Tiers.Count; i++)
+        {
+            var tier = set.Tiers[i];
+            if (!TierMatches(skills, set, tier, out var loadoutName))
+                continue;
+
+            return new MercMatch(set, i + 1, tier.Name, loadoutName);
+        }
+
+        return null;
+    }
+
+    public static bool IsFullMatch(IReadOnlyList<MercSkillSnapshot> skills, MercSkillSet set) =>
+        GetBestMatch(skills, set) != null;
+
+    private static bool HasAnyForbidden(IReadOnlyList<MercSkillSnapshot> skills, IReadOnlyList<string> forbidden)
+    {
+        if (forbidden == null || forbidden.Count == 0)
             return false;
 
-        foreach (var forbidden in set.ForbiddenSkills)
+        foreach (var name in forbidden)
         {
-            if (HasSkill(skills.Select(s => s.Name), forbidden))
-                return false;
+            if (HasSkill(skills.Select(s => s.Name), name))
+                return true;
         }
+
+        return false;
+    }
+
+    private static bool TierMatches(
+        IReadOnlyList<MercSkillSnapshot> skills,
+        MercSkillSet set,
+        MercTierSpec tier,
+        out string loadoutName)
+    {
+        loadoutName = null;
+        if (tier == null)
+            return false;
+
+        if (HasAnyForbidden(skills, tier.ForbiddenSkills))
+            return false;
 
         foreach (var required in set.RequiredSkills)
         {
@@ -415,40 +556,59 @@ public static class MercProfiles
                 return false;
         }
 
-        var setActives = RelevantActivePatterns(set).ToList();
-        foreach (var group in set.RequiredAnyOfGroups)
+        foreach (var required in tier.RequiredSkills)
         {
-            if (group == null || group.Count == 0)
-                continue;
-
-            if (!group.Any(option => HasOptionOnActives(skills, setActives, option)))
+            if (!HasSkill(skills.Select(s => s.Name), required))
                 return false;
         }
 
-        foreach (var link in set.RequiredLinks)
+        foreach (var link in tier.RequiredLinks)
         {
             if (!LinkRequirementMet(skills, link))
                 return false;
         }
 
-        if (set.RequiredAnyLoadout.Count > 0)
+        var actives = RelevantActivePatterns(set)
+            .Concat(RelevantActivePatterns(tier))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        foreach (var group in tier.RequiredAnyOfGroups)
         {
-            if (!set.RequiredAnyLoadout.Any(loadout => LoadoutMatches(skills, loadout)))
+            if (group == null || group.Count == 0)
+                continue;
+
+            if (!group.Any(option => HasOptionOnActives(skills, actives, option)))
                 return false;
         }
 
-        return true;
+        if (tier.RequiredAnyLoadout.Count > 0)
+        {
+            MercLoadout matched = null;
+            foreach (var loadout in tier.RequiredAnyLoadout)
+            {
+                if (!LoadoutMatches(skills, loadout))
+                    continue;
+                matched = loadout;
+                break;
+            }
+
+            if (matched == null)
+                return false;
+
+            loadoutName = matched.Name;
+        }
+
+        return tier.RequiredLinks.Count > 0
+               || tier.RequiredAnyOfGroups.Count > 0
+               || tier.RequiredSkills.Count > 0
+               || tier.RequiredAnyLoadout.Count > 0
+               || set.RequiredSkills.Count > 0;
     }
 
     public static string GetMatchedLoadoutName(IReadOnlyList<MercSkillSnapshot> skills, MercSkillSet set)
     {
-        foreach (var loadout in set.RequiredAnyLoadout)
-        {
-            if (LoadoutMatches(skills, loadout))
-                return loadout.Name;
-        }
-
-        return null;
+        return GetBestMatch(skills, set)?.LoadoutName;
     }
 
     public static bool LoadoutMatches(IReadOnlyList<MercSkillSnapshot> skills, MercLoadout loadout)
@@ -501,13 +661,19 @@ public static class MercProfiles
         if (set.RequiredSkills.Any(r => SkillNameMatches(skillName, r)))
             return true;
 
-        if (set.RequiredLinks.Any(l => SkillNameMatches(skillName, l.ActiveSkill)))
-            return true;
-
-        foreach (var loadout in set.RequiredAnyLoadout)
+        foreach (var tier in set.Tiers)
         {
-            if (loadout.RequiredLinks.Any(l => SkillNameMatches(skillName, l.ActiveSkill)))
+            if (tier.RequiredSkills.Any(r => SkillNameMatches(skillName, r)))
                 return true;
+
+            if (tier.RequiredLinks.Any(l => SkillNameMatches(skillName, l.ActiveSkill)))
+                return true;
+
+            foreach (var loadout in tier.RequiredAnyLoadout)
+            {
+                if (loadout.RequiredLinks.Any(l => SkillNameMatches(skillName, l.ActiveSkill)))
+                    return true;
+            }
         }
 
         return false;
@@ -518,45 +684,57 @@ public static class MercProfiles
         if (string.IsNullOrWhiteSpace(activeSkillName) || string.IsNullOrWhiteSpace(supportName))
             return false;
 
-        foreach (var link in set.RequiredLinks)
+        var setActives = RelevantActivePatterns(set).ToList();
+
+        foreach (var tier in set.Tiers)
+        {
+            if (LinkListHasRequiredSupport(tier.RequiredLinks, activeSkillName, supportName))
+                return true;
+
+            var tierActives = RelevantActivePatterns(tier).ToList();
+            if (set.RequiredSkills.Any(r => SkillNameMatches(activeSkillName, r)) ||
+                tierActives.Any(a => SkillNameMatches(activeSkillName, a)) ||
+                setActives.Any(a => SkillNameMatches(activeSkillName, a)))
+            {
+                foreach (var group in tier.RequiredAnyOfGroups)
+                {
+                    if (group != null && group.Any(option => SkillNameMatches(supportName, option)))
+                        return true;
+                }
+            }
+
+            foreach (var loadout in tier.RequiredAnyLoadout)
+            {
+                if (LinkListHasRequiredSupport(loadout.RequiredLinks, activeSkillName, supportName))
+                    return true;
+
+                var loadoutActives = RelevantActivePatterns(loadout).ToList();
+                if (!loadoutActives.Any(a => SkillNameMatches(activeSkillName, a)))
+                    continue;
+
+                foreach (var group in loadout.RequiredAnyOfGroups)
+                {
+                    if (group != null && group.Any(option => SkillNameMatches(supportName, option)))
+                        return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool LinkListHasRequiredSupport(
+        IReadOnlyList<LinkedSupportRequirement> links,
+        string activeSkillName,
+        string supportName)
+    {
+        foreach (var link in links)
         {
             if (!SkillNameMatches(activeSkillName, link.ActiveSkill))
                 continue;
 
             if (link.Supports.Any(s => SkillNameMatches(supportName, s)))
                 return true;
-        }
-
-        var setActives = RelevantActivePatterns(set).ToList();
-        if (setActives.Any(a => SkillNameMatches(activeSkillName, a)))
-        {
-            foreach (var group in set.RequiredAnyOfGroups)
-            {
-                if (group != null && group.Any(option => SkillNameMatches(supportName, option)))
-                    return true;
-            }
-        }
-
-        foreach (var loadout in set.RequiredAnyLoadout)
-        {
-            foreach (var link in loadout.RequiredLinks)
-            {
-                if (!SkillNameMatches(activeSkillName, link.ActiveSkill))
-                    continue;
-
-                if (link.Supports.Any(s => SkillNameMatches(supportName, s)))
-                    return true;
-            }
-
-            var loadoutActives = RelevantActivePatterns(loadout).ToList();
-            if (!loadoutActives.Any(a => SkillNameMatches(activeSkillName, a)))
-                continue;
-
-            foreach (var group in loadout.RequiredAnyOfGroups)
-            {
-                if (group != null && group.Any(option => SkillNameMatches(supportName, option)))
-                    return true;
-            }
         }
 
         return false;
@@ -567,7 +745,34 @@ public static class MercProfiles
         if (string.IsNullOrWhiteSpace(activeSkillName) || string.IsNullOrWhiteSpace(supportName))
             return false;
 
-        foreach (var link in set.RequiredLinks)
+        foreach (var tier in set.Tiers)
+        {
+            if (LinkListHasForbiddenSupport(tier.RequiredLinks, activeSkillName, supportName))
+                return true;
+
+            foreach (var loadout in tier.RequiredAnyLoadout)
+            {
+                if (LinkListHasForbiddenSupport(loadout.RequiredLinks, activeSkillName, supportName))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Set-level forbidden actives (always red). Tier-only forbids (e.g. Mirror Arrow on Better+)
+    /// only block higher tiers; they are not highlighted as hard fails.
+    /// </summary>
+    public static bool IsForbiddenSkillName(string skillName, MercSkillSet set) =>
+        set.ForbiddenSkills.Any(f => SkillNameMatches(skillName, f));
+
+    private static bool LinkListHasForbiddenSupport(
+        IReadOnlyList<LinkedSupportRequirement> links,
+        string activeSkillName,
+        string supportName)
+    {
+        foreach (var link in links)
         {
             if (!SkillNameMatches(activeSkillName, link.ActiveSkill))
                 continue;
@@ -576,26 +781,14 @@ public static class MercProfiles
                 return true;
         }
 
-        foreach (var loadout in set.RequiredAnyLoadout)
-        {
-            foreach (var link in loadout.RequiredLinks)
-            {
-                if (!SkillNameMatches(activeSkillName, link.ActiveSkill))
-                    continue;
-
-                if (link.ForbiddenSupports.Any(s => SkillNameMatches(supportName, s)))
-                    return true;
-            }
-        }
-
         return false;
     }
 
     public static string GetLinkAnnotation(string skillName, IReadOnlyList<MercSkillSnapshot> skills, MercSkillSet set)
     {
         var notes = new List<string>();
-        var links = set.RequiredLinks
-            .Concat(set.RequiredAnyLoadout.SelectMany(l => l.RequiredLinks));
+        var links = set.Tiers
+            .SelectMany(t => t.RequiredLinks.Concat(t.RequiredAnyLoadout.SelectMany(l => l.RequiredLinks)));
 
         foreach (var link in links)
         {
