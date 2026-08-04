@@ -15,12 +15,16 @@ public class MercScanner : BaseSettingsPlugin<MercScannerSettings>
 {
     private static readonly int[] SkillListIndices = [2, 10, 0, 1, 0];
 
-    // Rank 1 = best. Dark green (not lime), orange, blue.
-    private static readonly Color Tier1Color = new(20, 110, 40, 255);
-    private static readonly Color Tier2Color = new(220, 120, 20, 255);
-    private static readonly Color Tier3Color = new(50, 120, 200, 255);
-    private static readonly Color MatchColor = Tier1Color;
-    private static readonly Color ValuableItemColor = Tier1Color;
+    // Rank 1 = best. Palette by rank index; extra ranks reuse the last color.
+    private static readonly Color[] TierRankColors =
+    [
+        new(20, 110, 40, 255),   // Best — dark green
+        new(220, 120, 20, 255),  // Better / mid — orange
+        new(50, 120, 200, 255),  // Minimum / floor — blue
+    ];
+    private static readonly Color MatchColor = TierRankColors[0];
+    // Hot pink — distinct from green match frames so Take Item / loot pops.
+    private static readonly Color ValuableItemColor = new(255, 20, 147, 255);
 
     private bool _loggedMissingNinjaPrice;
 
@@ -145,17 +149,12 @@ public class MercScanner : BaseSettingsPlugin<MercScannerSettings>
         if (match == null)
             return MatchColor;
 
-        // Single-band sets (e.g. Sniper Full) use best-tier green.
+        // Single-band sets always use best-tier color regardless of name.
         if (match.Set.Tiers.Count <= 1)
-            return MatchColor;
+            return TierRankColors[0];
 
-        return match.Rank switch
-        {
-            1 => Tier1Color,
-            2 => Tier2Color,
-            3 => Tier3Color,
-            _ => MatchColor,
-        };
+        var index = Math.Clamp(match.Rank - 1, 0, TierRankColors.Length - 1);
+        return TierRankColors[index];
     }
 
     private void RenderValuableRucksackAlerts(MercenaryEncounterWindow window)
@@ -198,13 +197,13 @@ public class MercScanner : BaseSettingsPlugin<MercScannerSettings>
 
         foreach (var (_, _, rect) in valuables)
         {
-            Graphics.DrawFrame(rect, ValuableItemColor, 3);
+            Graphics.DrawFrame(rect, ValuableItemColor, 4);
         }
 
-        DrawElementFrame(window.TakeItemButton, ValuableItemColor);
+        DrawElementFrame(window.TakeItemButton, ValuableItemColor, 5);
     }
 
-    private void DrawElementFrame(Element element, Color color)
+    private void DrawElementFrame(Element element, Color color, int thickness = 3)
     {
         try
         {
@@ -215,7 +214,7 @@ public class MercScanner : BaseSettingsPlugin<MercScannerSettings>
             if (rect.Width <= 1 || rect.Height <= 1)
                 return;
 
-            Graphics.DrawFrame(rect, color, 3);
+            Graphics.DrawFrame(rect, color, thickness);
         }
         catch
         {

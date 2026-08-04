@@ -7,7 +7,6 @@
       ],
       "tiers": [
         {
-          "name": "Better",
           "forbiddenSkills": [
             "Mirror Arrow"
           ],
@@ -37,7 +36,32 @@
           ]
         },
         {
-          "name": "Sellable",
+          "requiredLinks": [
+            {
+              "activeSkill": "Ice Shot",
+              "supports": [
+                "Greater Multiple Projectiles",
+                "Return",
+                "Greater Elemental Damage with Attacks",
+                "Greater Hypothermia"
+              ]
+            },
+            {
+              "activeSkill": "Vaal Ice Shot",
+              "supports": [
+                "Greater Multiple Projectiles",
+                "Return",
+                "Greater Elemental Damage with Attacks",
+                "Greater Hypothermia",
+                "Greater Cooldown Recovery"
+              ]
+            }
+          ],
+          "requiredAnyOfGroups": [
+            [ "Chain II", "Greater Fork" ]
+          ]
+        },
+        {
           "requiredLinks": [
             {
               "activeSkill": "Ice Shot",
@@ -63,18 +87,20 @@
       "forbiddenSkills": [
         "Barrage",
         "Kinetic Rain of Impact",
-        "Flame Dash",
         "Kinetic Bolt",
         "Power Siphon"
       ],
       "tiers": [
         {
-          "name": "Better",
+          "forbiddenSkills": [
+            "Flame Dash"
+          ],
           "requiredLinks": [
             {
               "activeSkill": "Kinetic Blast of Clustering",
               "supports": [
                 "Greater Multiple Projectiles",
+                "Return",
                 "Greater Elemental Damage with Attacks"
               ]
             }
@@ -84,17 +110,29 @@
           ]
         },
         {
-          "name": "Sellable",
           "requiredLinks": [
             {
               "activeSkill": "Kinetic Blast of Clustering",
               "supports": [
-                "Greater Multiple Projectiles"
+                "Greater Multiple Projectiles",
+                "Return",
+                "Greater Elemental Damage with Attacks"
               ]
             }
           ],
           "requiredAnyOfGroups": [
             [ "Greater Fork", "Chain II" ]
+          ]
+        },
+        {
+          "requiredLinks": [
+            {
+              "activeSkill": "Kinetic Blast of Clustering",
+              "supports": [
+                "Greater Multiple Projectiles",
+                "Return"
+              ]
+            }
           ]
         }
       ]
@@ -107,7 +145,6 @@
       ],
       "tiers": [
         {
-          "name": "Better",
           "requiredLinks": [
             {
               "activeSkill": "Vaal Molten Strike",
@@ -126,7 +163,23 @@
           ]
         },
         {
-          "name": "Sellable",
+          "requiredLinks": [
+            {
+              "activeSkill": "Vaal Molten Strike",
+              "supports": [
+                "Greater Multiple Projectiles"
+              ]
+            },
+            {
+              "activeSkill": "Molten Strike",
+              "supports": [
+                "Greater Multiple Projectiles",
+                "Greater Elemental Damage with Attacks"
+              ]
+            }
+          ]
+        },
+        {
           "requiredLinks": [
             {
               "activeSkill": "Vaal Molten Strike",
@@ -154,7 +207,6 @@
       ],
       "tiers": [
         {
-          "name": "Full",
           "requiredLinks": [
             {
               "activeSkill": "Tornado Shot",
@@ -181,7 +233,6 @@
       ],
       "tiers": [
         {
-          "name": "Better",
           "requiredAnyLoadout": [
             {
               "name": "Frost Blades",
@@ -193,12 +244,13 @@
                     "Greater Elemental Damage with Attacks",
                     "Greater Multiple Projectiles",
                     "Greater Multistrike",
-                    "Greater Hypothermia"
+                    "Greater Hypothermia",
+                    "Chain II"
+                  ],
+                  "forbiddenSupports": [
+                    "Greater Pierce"
                   ]
                 }
-              ],
-              "requiredAnyOfGroups": [
-                [ "Chain II", "Greater Pierce" ]
               ]
             },
             {
@@ -217,7 +269,6 @@
           ]
         },
         {
-          "name": "Sellable",
           "requiredAnyLoadout": [
             {
               "name": "Frost Blades",
@@ -225,12 +276,15 @@
                 {
                   "activeSkill": "Frost Blades",
                   "supports": [
-                    "Return"
+                    "Return",
+                    "Greater Elemental Damage with Attacks",
+                    "Greater Multiple Projectiles",
+                    "Chain II"
+                  ],
+                  "forbiddenSupports": [
+                    "Greater Pierce"
                   ]
                 }
-              ],
-              "requiredAnyOfGroups": [
-                [ "Chain II", "Greater Pierce" ]
               ]
             },
             {
@@ -240,10 +294,111 @@
                   "activeSkill": "Static Strike",
                   "supports": [
                     "Greater More Duration",
-                    "Chain II",
-                    "Increased Area of Effect"
+                    "Chain II"
                   ]
                 }
+              ]
+            }
+          ]
+        },
+        {
+          "requiredAnyLoadout": [
+            {
+              "name": "Frost Blades",
+              "requiredLinks": [
+                {
+                  "activeSkill": "Frost Blades",
+                  "supports": [
+                    "Chain II"
+                  ],
+                  "forbiddenSupports": [
+                    "Greater Pierce"
+                  ]
+                }
+              ],
+              "requiredAnyOfGroups": [
+                [ "Greater Elemental Damage with Attacks", "Greater Hypothermia" ]
+              ]
+            },
+            {
+              "name": "Static Strike",
+              "requiredLinks": [
+                {
+                  "activeSkill": "Static Strike",
+                  "supports": [
+                    "Greater More Duration"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Thunderquiver",
+      "forbiddenSkills": [
+        "Galvanic Arrow"
+      ],
+      "tiers": [
+        {
+          "requiredLinks": [
+            {
+              "activeSkill": "Lightning Arrow",
+              "supports": [
+                "Greater Multiple Projectiles",
+                "Return",
+                "Greater Elemental Damage with Attacks",
+                "Gilded Extra Targets",
+                "Greater Fork"
+              ]
+            },
+            {
+              "activeSkill": "Storm Rain",
+              "supports": [
+                "Gilded Additional Pulses",
+                "Greater Multiple Projectiles",
+                "Greater Elemental Damage with Attacks",
+                "Concentrated Effect"
+              ]
+            }
+          ]
+        },
+        {
+          "requiredLinks": [
+            {
+              "activeSkill": "Lightning Arrow",
+              "supports": [
+                "Greater Multiple Projectiles",
+                "Return",
+                "Greater Elemental Damage with Attacks",
+                "Greater Fork"
+              ]
+            },
+            {
+              "activeSkill": "Storm Rain",
+              "supports": [
+                "Gilded Additional Pulses",
+                "Greater Multiple Projectiles",
+                "Greater Elemental Damage with Attacks"
+              ]
+            }
+          ]
+        },
+        {
+          "requiredLinks": [
+            {
+              "activeSkill": "Lightning Arrow",
+              "supports": [
+                "Greater Multiple Projectiles",
+                "Return"
+              ]
+            },
+            {
+              "activeSkill": "Storm Rain",
+              "supports": [
+                "Gilded Additional Pulses",
+                "Greater Multiple Projectiles"
               ]
             }
           ]
@@ -258,7 +413,6 @@
       ],
       "tiers": [
         {
-          "name": "Better",
           "requiredLinks": [
             {
               "activeSkill": "Blade Trap",
@@ -287,7 +441,30 @@
           ]
         },
         {
-          "name": "Sellable",
+          "requiredLinks": [
+            {
+              "activeSkill": "Blade Trap",
+              "supports": [
+                "Multiple Traps",
+                "Greater Throwing Speed"
+              ]
+            },
+            {
+              "activeSkill": "Spectral Helix of Trarthus",
+              "supports": [
+                "Multiple Traps",
+                "Greater Throwing Speed"
+              ]
+            },
+            {
+              "activeSkill": "Spectral Throw of Trarthus",
+              "supports": [
+                "Multiple Traps"
+              ]
+            }
+          ]
+        },
+        {
           "requiredLinks": [
             {
               "activeSkill": "Blade Trap",

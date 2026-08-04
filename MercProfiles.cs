@@ -62,7 +62,7 @@ public sealed class MercTierSpec(
     public IReadOnlyList<LinkedSupportRequirement> RequiredLinks { get; } = requiredLinks ?? [];
     public IReadOnlyList<IReadOnlyList<string>> RequiredAnyOfGroups { get; } = requiredAnyOfGroups ?? [];
     public IReadOnlyList<MercLoadout> RequiredAnyLoadout { get; } = requiredAnyLoadout ?? [];
-    /// <summary>Extra forbids beyond set-level (e.g. Mirror Arrow only on Better).</summary>
+    /// <summary>Extra forbids beyond set-level (block this band only; lower bands may still match).</summary>
     public IReadOnlyList<string> ForbiddenSkills { get; } = forbiddenSkills ?? [];
 }
 
@@ -174,15 +174,15 @@ public static class MercProfiles
 
     private static IReadOnlyList<MercTierSpec> MapTiers(List<TierDto> tiers)
     {
-        return [.. (tiers ?? [])
-            .Where(t => t != null)
-            .Select((t, i) => new MercTierSpec(
-                name: string.IsNullOrWhiteSpace(t.Name) ? DefaultTierName(i + 1) : t.Name.Trim(),
-                requiredLinks: MapLinks(t.RequiredLinks),
-                requiredAnyOfGroups: MapAnyOfGroups(t.RequiredAnyOfGroups),
-                requiredSkills: t.RequiredSkills,
-                requiredAnyLoadout: MapLoadouts(t.RequiredAnyLoadout),
-                forbiddenSkills: t.ForbiddenSkills))];
+        var list = (tiers ?? []).Where(t => t != null).ToList();
+        var count = list.Count;
+        return [.. list.Select((t, i) => new MercTierSpec(
+            name: string.IsNullOrWhiteSpace(t.Name) ? DefaultTierName(i + 1, count) : t.Name.Trim(),
+            requiredLinks: MapLinks(t.RequiredLinks),
+            requiredAnyOfGroups: MapAnyOfGroups(t.RequiredAnyOfGroups),
+            requiredSkills: t.RequiredSkills,
+            requiredAnyLoadout: MapLoadouts(t.RequiredAnyLoadout),
+            forbiddenSkills: t.ForbiddenSkills))];
     }
 
     private static IReadOnlyList<MercLoadout> MapLoadouts(List<LoadoutDto> loadouts)
@@ -195,13 +195,20 @@ public static class MercProfiles
                 MapAnyOfGroups(l.RequiredAnyOfGroups)))];
     }
 
-    private static string DefaultTierName(int rank) => rank switch
+    /// <summary>
+    /// Names from band position when JSON omits <c>name</c>.
+    /// 1 band → Best; 2 → Best / Minimum; 3 → Best / Better / Minimum; more → Best, Better, …, Minimum.
+    /// </summary>
+    private static string DefaultTierName(int rank, int tierCount)
     {
-        1 => "Best",
-        2 => "Better",
-        3 => "Sellable",
-        _ => $"T{rank}",
-    };
+        if (tierCount <= 1 || rank == 1)
+            return "Best";
+        if (rank == tierCount)
+            return "Minimum";
+        if (rank == 2)
+            return "Better";
+        return $"T{rank}";
+    }
 
     private static IReadOnlyList<LinkedSupportRequirement> MapLinks(List<LinkDto> links)
     {
@@ -459,6 +466,12 @@ public static class MercProfiles
             return "GildSec";
         if (n.Contains("Gilded Molten Eruption", StringComparison.OrdinalIgnoreCase))
             return "GildErupt";
+        if (n.Contains("Gilded Additional Pulses", StringComparison.OrdinalIgnoreCase))
+            return "GildPulse";
+        if (n.Contains("Gilded Extra Targets", StringComparison.OrdinalIgnoreCase))
+            return "GildTgt";
+        if (n.Contains("Concentrated Effect", StringComparison.OrdinalIgnoreCase))
+            return "Conc";
         if (n.Contains("Greater Elemental Damage with Attacks", StringComparison.OrdinalIgnoreCase)
             || n.Equals("WED", StringComparison.OrdinalIgnoreCase))
             return "WED";
@@ -761,8 +774,8 @@ public static class MercProfiles
     }
 
     /// <summary>
-    /// Set-level forbidden actives (always red). Tier-only forbids (e.g. Mirror Arrow on Better+)
-    /// only block higher tiers; they are not highlighted as hard fails.
+    /// Set-level forbidden actives (always red). Tier-only forbids only block that band
+    /// (lower ranks may still match) and are not highlighted as hard fails.
     /// </summary>
     public static bool IsForbiddenSkillName(string skillName, MercSkillSet set) =>
         set.ForbiddenSkills.Any(f => SkillNameMatches(skillName, f));
