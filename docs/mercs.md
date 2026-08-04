@@ -96,7 +96,8 @@ Optional FB damage supports (max 5 total supports on FB; no Multistrike): WED, G
 | 2 | **Better** | Return + Chain + **1 of** WED \| GMP \| Hypo | Frostblink \| Dash |
 | 3 | **Minimum** | Return + Chain | Frostblink \| Dash |
 
-**Forbidden supports on FB:** Greater Pierce  
+**Forbidden supports on FB:** Pierce, Greater Pierce  
+
 **Forbidden actives:** Spectral Helix  
 Wild Strike is allowed (no special highlight).
 
