@@ -228,106 +228,120 @@
     },
     {
       "name": "Combatant",
+      "requiredSkills": [
+        "Static Strike"
+      ],
       "forbiddenSkills": [
         "Spectral Helix"
       ],
       "tiers": [
         {
-          "requiredAnyLoadout": [
+          "requiredLinks": [
             {
-              "name": "Frost Blades",
-              "requiredLinks": [
-                {
-                  "activeSkill": "Frost Blades",
-                  "supports": [
-                    "Return",
-                    "Greater Elemental Damage with Attacks",
-                    "Greater Multiple Projectiles",
-                    "Greater Multistrike",
-                    "Greater Hypothermia",
-                    "Chain II"
-                  ],
-                  "forbiddenSupports": [
-                    "Greater Pierce"
-                  ]
-                }
-              ]
-            },
-            {
-              "name": "Static Strike",
-              "requiredLinks": [
-                {
-                  "activeSkill": "Static Strike",
-                  "supports": [
-                    "Greater More Duration",
-                    "Greater Elemental Damage with Attacks",
-                    "Chain II"
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "requiredAnyLoadout": [
-            {
-              "name": "Frost Blades",
-              "requiredLinks": [
-                {
-                  "activeSkill": "Frost Blades",
-                  "supports": [
-                    "Return",
-                    "Greater Elemental Damage with Attacks",
-                    "Greater Multiple Projectiles",
-                    "Chain II"
-                  ],
-                  "forbiddenSupports": [
-                    "Greater Pierce"
-                  ]
-                }
-              ]
-            },
-            {
-              "name": "Static Strike",
-              "requiredLinks": [
-                {
-                  "activeSkill": "Static Strike",
-                  "supports": [
-                    "Greater More Duration",
-                    "Chain II"
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "requiredAnyLoadout": [
-            {
-              "name": "Frost Blades",
-              "requiredLinks": [
-                {
-                  "activeSkill": "Frost Blades",
-                  "supports": [
-                    "Chain II"
-                  ],
-                  "forbiddenSupports": [
-                    "Greater Pierce"
-                  ]
-                }
+              "activeSkill": "Frost Blades",
+              "supports": [
+                "Return",
+                "Chain II",
+                "Greater Elemental Damage with Attacks",
+                "Greater Multiple Projectiles",
+                "Greater Hypothermia"
               ],
-              "requiredAnyOfGroups": [
-                [ "Greater Elemental Damage with Attacks", "Greater Hypothermia" ]
+              "forbiddenSupports": [
+                "Greater Pierce"
+              ]
+            }
+          ],
+          "requiredAnyLoadout": [
+            {
+              "name": "Frostblink",
+              "requiredLinks": [
+                {
+                  "activeSkill": "Frostblink",
+                  "supports": []
+                }
               ]
             },
             {
-              "name": "Static Strike",
+              "name": "Dash",
               "requiredLinks": [
                 {
-                  "activeSkill": "Static Strike",
-                  "supports": [
-                    "Greater More Duration"
-                  ]
+                  "activeSkill": "Dash",
+                  "supports": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "requiredLinks": [
+            {
+              "activeSkill": "Frost Blades",
+              "supports": [
+                "Return",
+                "Chain II"
+              ],
+              "forbiddenSupports": [
+                "Greater Pierce"
+              ]
+            }
+          ],
+          "requiredAnyOfGroups": [
+            [
+              "Greater Elemental Damage with Attacks",
+              "Greater Multiple Projectiles",
+              "Greater Hypothermia"
+            ]
+          ],
+          "requiredAnyLoadout": [
+            {
+              "name": "Frostblink",
+              "requiredLinks": [
+                {
+                  "activeSkill": "Frostblink",
+                  "supports": []
+                }
+              ]
+            },
+            {
+              "name": "Dash",
+              "requiredLinks": [
+                {
+                  "activeSkill": "Dash",
+                  "supports": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "requiredLinks": [
+            {
+              "activeSkill": "Frost Blades",
+              "supports": [
+                "Return",
+                "Chain II"
+              ],
+              "forbiddenSupports": [
+                "Greater Pierce"
+              ]
+            }
+          ],
+          "requiredAnyLoadout": [
+            {
+              "name": "Frostblink",
+              "requiredLinks": [
+                {
+                  "activeSkill": "Frostblink",
+                  "supports": []
+                }
+              ]
+            },
+            {
+              "name": "Dash",
+              "requiredLinks": [
+                {
+                  "activeSkill": "Dash",
+                  "supports": []
                 }
               ]
             }

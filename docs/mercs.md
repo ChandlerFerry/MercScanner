@@ -84,14 +84,20 @@ Full package only (`Full`, dark green):
 
 ---
 
-## Combatant — either Frost Blades or Static Strike
+## Combatant — Frost Blades + Static Strike + movement
 
-| Rank | Tier | Frost Blades path | Static Strike path |
+Always required: **Static Strike**, **Frost Blades** with **Return + Chain** and **no Pierce**, and a movement skill (**Frostblink** or **Dash**).
+
+Optional FB damage supports (max 5 total supports on FB; no Multistrike): WED, GMP, Hypothermia.
+
+| Rank | Tier | Frost Blades supports | Movement |
 | --- | --- | --- | --- |
-| 1 | **Better** | Return + WED + GMP + Multistrike + Hypo + (Chain\|Pierce) | More Duration + WED + Chain |
-| 2 | **Sellable** | Return + (Chain\|Pierce) | More Duration + Chain + Increased Area of Effect |
+| 1 | **Best** | Return + Chain + WED + GMP + Hypo (all 3) | Frostblink \| Dash |
+| 2 | **Better** | Return + Chain + **1 of** WED \| GMP \| Hypo | Frostblink \| Dash |
+| 3 | **Minimum** | Return + Chain | Frostblink \| Dash |
 
-**Forbidden:** Spectral Helix  
+**Forbidden supports on FB:** Greater Pierce  
+**Forbidden actives:** Spectral Helix  
 Wild Strike is allowed (no special highlight).
 
 ---
